@@ -42,45 +42,37 @@
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    // 1) Karte initialisieren (Zentrum Deutschland, Zoom 5)
+    // Karte initialisieren
     const map = L.map('map').setView([51.1657, 10.4515], 5);
 
-    // 2) OpenStreetMap-Tiles als Hintergrund
+    // OSM-Tiles
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '© OpenStreetMap-Mitwirkende'
     }).addTo(map);
 
-    // 3) GeoJSON laden und Marker + Popups mit Pie-Chart erstellen
+    // GeoJSON laden und Popups mit Chart
     fetch('standorte.geojson')
-      .then(response => response.json())
+      .then(res => res.json())
       .then(data => {
         L.geoJSON(data, {
           onEachFeature(feature, layer) {
             const { name, projekte } = feature.properties;
 
-            // Status zählen
-            const counts = {
-              'In Arbeit': 0,
-              'Pipeline': 0,
-              'Abgeschlossen': 0
-            };
+            // Projekt-Status zählen
+            const counts = { 'In Arbeit': 0, 'Pipeline': 0, 'Abgeschlossen': 0 };
             projekte.forEach(p => {
               if (counts[p.status] !== undefined) counts[p.status]++;
             });
 
-            // Labels und Daten für das Diagramm
+            // Labels und Werte
             const labels = ['In Arbeit', 'Pipeline', 'Abgeschlossen'];
-            const values = [
-              counts['In Arbeit'],
-              counts['Pipeline'],
-              counts['Abgeschlossen']
-            ];
+            const values = labels.map(l => counts[l]);
 
-            // Eindeutige Canvas-ID
+            // Eindeutige Canvas-ID fürs Chart
             const canvasId = 'chart-' + name.replace(/\s+/g, '-');
 
-            // Popup-HTML mit Canvas-Element
+            // Popup-HTML
             const popupHtml = `
               <div class="popup-content">
                 <h4>${name}</h4>
@@ -88,15 +80,19 @@
               </div>
             `;
 
-            // Popup binden ohne autoPan
-            layer.bindPopup(popupHtml, { autoPan: false });
+            // Popup binden ohne autoPan, ohne closeButton, ohne closeOnClick
+            layer.bindPopup(popupHtml, {
+              autoPan: false,
+              closeButton: false,
+              closeOnClick: false
+            });
 
-            // Popup bei Hover öffnen
+            // Popup auf Hover öffnen
             layer.on('mouseover', () => layer.openPopup());
-            // Kein Schließen beim mouseout:
+            // Kein Schließen beim Verlassen:
             // layer.on('mouseout', () => layer.closePopup());
 
-            // Chart zeichnen, wenn Popup geöffnet wird
+            // Chart beim Öffnen rendern
             layer.on('popupopen', () => {
               const ctx = document.getElementById(canvasId).getContext('2d');
               new Chart(ctx, {
