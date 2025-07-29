@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Interaktive Firmenkarte</title>
+  <title>Interaktive Firmenkarte mit Chart</title>
 
   <!-- Leaflet CSS -->
   <link
@@ -11,21 +11,19 @@
     href="https://unpkg.com/leaflet/dist/leaflet.css"
   />
 
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
   <!-- eigenes Stylesheet -->
   <link rel="stylesheet" href="assets/style.css" />
 
-  <!-- Fallback-Styles, falls du assets/style.css später leer lässt -->
   <style>
-    html,
-    body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-    }
-    #map {
-      width: 100%;
-      height: 100%;
-    }
+    html, body { margin:0; padding:0; height:100% }
+    #map { width:100%; height:100% }
+    /* Popup-Inhalt etwas schicker */
+    .popup-content { text-align: center; }
+    .popup-content h4 { margin: 0 0 0.5em; }
+    .popup-content canvas { display: block; margin: 0 auto; }
   </style>
 </head>
 <body>
@@ -34,40 +32,75 @@
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    // 1) Karte initialisieren (Zentrum Deutschland, Zoom 5)
+    // 1) Karte initialisieren
     const map = L.map('map').setView([51.1657, 10.4515], 5);
 
-    // 2) OpenStreetMap-Tiles als Hintergrund
+    // 2) OSM-Tiles
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '© OpenStreetMap-Mitwirkende'
     }).addTo(map);
 
-    // 3) GeoJSON-Daten laden und Marker + Popups erstellen
+    // 3) GeoJSON laden
     fetch('standorte.geojson')
-      .then(response => response.json())
+      .then(res => res.json())
       .then(data => {
         L.geoJSON(data, {
-          pointToLayer(feature, latlng) {
-            // Hier könntest du je nach Feature.properties.Icon ein anderes Icon setzen
-            return L.marker(latlng);
-          },
           onEachFeature(feature, layer) {
             const { name, projekte } = feature.properties;
-            // HTML für Popup-Inhalt
+            // Zähle die Stati
+            const counts = { 'In Arbeit': 0, 'Planung': 0, 'Abgeschlossen': 0 };
+            projekte.forEach(p => {
+              if (counts[p.status] !== undefined) counts[p.status]++;
+            });
+            // Labels und Daten für das Diagramm
+            const labels = ['In Arbeit', 'Pipeline', 'Abgeschlossen'];
+            const values = [
+              counts['In Arbeit'],
+              counts['Planung'],
+              counts['Abgeschlossen']
+            ];
+            // Eindeutige ID für jedes Canvas
+            const canvasId = 'chart-' + name.replace(/\s+/g, '-');
+
+            // Popup-HTML mit Canvas-Element
             const popupHtml = `
               <div class="popup-content">
                 <h4>${name}</h4>
-                <ul>
-                  ${projekte.map(p =>
-                    `<li>${p.name} – <strong>${p.status}</strong></li>`
-                  ).join('')}
-                </ul>
+                <canvas id="${canvasId}" width="150" height="150"></canvas>
               </div>
             `;
             layer.bindPopup(popupHtml);
+
+            // Chart zeichnen, sobald das Popup geöffnet wird
+            layer.on('popupopen', () => {
+              const ctx = document.getElementById(canvasId).getContext('2d');
+              new Chart(ctx, {
+                type: 'pie',
+                data: {
+                  labels,
+                  datasets: [{
+                    data: values,
+                    // Farben kannst du hier individuell anpassen
+                    backgroundColor: [
+                      '#4e79a7',
+                      '#f28e2b',
+                      '#e15759'
+                    ]
+                  }]
+                },
+                options: {
+                  plugins: {
+                    legend: { display: true, position: 'bottom' }
+                  },
+                  maintainAspectRatio: false
+                }
+              });
+            });
+
+            // Hover-Effekte
             layer.on('mouseover', () => layer.openPopup());
-            layer.on('mouseout',  () => layer.closePopup());
+            layer.on('mouseout', () => layer.closePopup());
           }
         }).addTo(map);
       })
@@ -75,4 +108,3 @@
   </script>
 </body>
 </html>
-
