@@ -1,0 +1,19 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Beispiel-Standort",
+        "projekte": [
+          { "name": "Projekt A", "status": "Planung" },
+          { "name": "Projekt B", "status": "In Arbeit" }
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [10.4515, 51.1657]
+      }
+    }
+  ]
+}
