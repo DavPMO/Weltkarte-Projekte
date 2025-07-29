@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Interaktive Firmenkarte</title>
+
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet/dist/leaflet.css"
+  />
+
+  <!-- eigenes Stylesheet -->
+  <link rel="stylesheet" href="assets/style.css" />
+
+  <!-- Fallback-Styles, falls du assets/style.css später leer lässt -->
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+    }
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    // 1) Karte initialisieren (Zentrum Deutschland, Zoom 5)
+    const map = L.map('map').setView([51.1657, 10.4515], 5);
+
+    // 2) OpenStreetMap-Tiles als Hintergrund
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap-Mitwirkende'
+    }).addTo(map);
+
+    // 3) GeoJSON-Daten laden und Marker + Popups erstellen
+    fetch('standorte.geojson')
+      .then(response => response.json())
+      .then(data => {
+        L.geoJSON(data, {
+          pointToLayer(feature, latlng) {
+            // Hier könntest du je nach Feature.properties.Icon ein anderes Icon setzen
+            return L.marker(latlng);
+          },
+          onEachFeature(feature, layer) {
+            const { name, projekte } = feature.properties;
+            // HTML für Popup-Inhalt
+            const popupHtml = `
+              <div class="popup-content">
+                <h4>${name}</h4>
+                <ul>
+                  ${projekte.map(p =>
+                    `<li>${p.name} – <strong>${p.status}</strong></li>`
+                  ).join('')}
+                </ul>
+              </div>
+            `;
+            layer.bindPopup(popupHtml);
+            layer.on('mouseover', () => layer.openPopup());
+            layer.on('mouseout',  () => layer.closePopup());
+          }
+        }).addTo(map);
+      })
+      .catch(err => console.error('Fehler beim Laden der GeoJSON:', err));
+  </script>
+</body>
+</html>
+
