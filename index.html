@@ -6,10 +6,7 @@
   <title>Interaktive Firmenkarte mit Chart</title>
 
   <!-- Leaflet CSS -->
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet/dist/leaflet.css"
-  />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -18,12 +15,25 @@
   <link rel="stylesheet" href="assets/style.css" />
 
   <style>
-    html, body { margin:0; padding:0; height:100% }
-    #map { width:100%; height:100% }
-    /* Popup-Inhalt etwas schicker */
-    .popup-content { text-align: center; }
-    .popup-content h4 { margin: 0 0 0.5em; }
-    .popup-content canvas { display: block; margin: 0 auto; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+    }
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+    .popup-content {
+      text-align: center;
+    }
+    .popup-content h4 {
+      margin: 0 0 0.5em;
+    }
+    .popup-content canvas {
+      display: block;
+      margin: 0 auto;
+    }
   </style>
 </head>
 <body>
@@ -32,35 +42,42 @@
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    // 1) Karte initialisieren
+    // 1) Karte initialisieren (Zentrum Deutschland, Zoom 5)
     const map = L.map('map').setView([51.1657, 10.4515], 5);
 
-    // 2) OSM-Tiles
+    // 2) OpenStreetMap-Tiles als Hintergrund
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '© OpenStreetMap-Mitwirkende'
     }).addTo(map);
 
-    // 3) GeoJSON laden
+    // 3) GeoJSON laden und Marker + Popups mit Pie-Chart erstellen
     fetch('standorte.geojson')
-      .then(res => res.json())
+      .then(response => response.json())
       .then(data => {
         L.geoJSON(data, {
           onEachFeature(feature, layer) {
             const { name, projekte } = feature.properties;
-            // Zähle die Stati
-            const counts = { 'In Arbeit': 0, 'Planung': 0, 'Abgeschlossen': 0 };
+
+            // Status zählen
+            const counts = {
+              'In Arbeit': 0,
+              'Pipeline': 0,
+              'Abgeschlossen': 0
+            };
             projekte.forEach(p => {
               if (counts[p.status] !== undefined) counts[p.status]++;
             });
+
             // Labels und Daten für das Diagramm
             const labels = ['In Arbeit', 'Pipeline', 'Abgeschlossen'];
             const values = [
               counts['In Arbeit'],
-              counts['Planung'],
+              counts['Pipeline'],
               counts['Abgeschlossen']
             ];
-            // Eindeutige ID für jedes Canvas
+
+            // Eindeutige Canvas-ID
             const canvasId = 'chart-' + name.replace(/\s+/g, '-');
 
             // Popup-HTML mit Canvas-Element
@@ -70,23 +87,25 @@
                 <canvas id="${canvasId}" width="150" height="150"></canvas>
               </div>
             `;
-            layer.bindPopup(popupHtml);
 
-            // Chart zeichnen, sobald das Popup geöffnet wird
+            // Popup binden ohne autoPan
+            layer.bindPopup(popupHtml, { autoPan: false });
+
+            // Popup bei Hover öffnen
+            layer.on('mouseover', () => layer.openPopup());
+            // Kein Schließen beim mouseout:
+            // layer.on('mouseout', () => layer.closePopup());
+
+            // Chart zeichnen, wenn Popup geöffnet wird
             layer.on('popupopen', () => {
               const ctx = document.getElementById(canvasId).getContext('2d');
               new Chart(ctx, {
                 type: 'pie',
                 data: {
-                  labels,
+                  labels: labels,
                   datasets: [{
                     data: values,
-                    // Farben kannst du hier individuell anpassen
-                    backgroundColor: [
-                      '#4e79a7',
-                      '#f28e2b',
-                      '#e15759'
-                    ]
+                    backgroundColor: ['#4e79a7', '#f28e2b', '#e15759']
                   }]
                 },
                 options: {
@@ -97,10 +116,6 @@
                 }
               });
             });
-
-            // Hover-Effekte
-            layer.on('mouseover', () => layer.openPopup());
-            layer.on('mouseout', () => layer.closePopup());
           }
         }).addTo(map);
       })
