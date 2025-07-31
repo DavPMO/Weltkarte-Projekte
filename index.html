@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Interaktive Firmenkarte mit Chart (Variante A)</title>
+  <title>Interaktive Firmenkarte mit Chart</title>
 
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
@@ -45,13 +45,13 @@
     // Karte initialisieren
     const map = L.map('map').setView([51.1657, 10.4515], 5);
 
-    // OpenStreetMap als Grundkarte
+    // OSM-Tiles
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '© OpenStreetMap-Mitwirkende'
     }).addTo(map);
 
-    // GeoJSON laden und Popups mit Pie-Chart erstellen
+    // GeoJSON laden und Popups mit Chart
     fetch('standorte.geojson')
       .then(res => res.json())
       .then(data => {
@@ -65,14 +65,14 @@
               if (counts[p.status] !== undefined) counts[p.status]++;
             });
 
-            // Labels und Werte für das Diagramm
+            // Labels und Werte
             const labels = ['In Arbeit', 'Pipeline', 'Abgeschlossen'];
             const values = labels.map(l => counts[l]);
 
-            // Eindeutige Canvas-ID
+            // Eindeutige Canvas-ID fürs Chart
             const canvasId = 'chart-' + name.replace(/\s+/g, '-');
 
-            // Popup-HTML mit Canvas
+            // Popup-HTML
             const popupHtml = `
               <div class="popup-content">
                 <h4>${name}</h4>
@@ -80,15 +80,19 @@
               </div>
             `;
 
-            // Popup binden (öffnet per Klick automatisch)
-            layer.bindPopup(popupHtml);
-
-            // Beim Klick das Popup öffnen
-            layer.on('click', () => {
-              layer.openPopup();
+            // Popup binden ohne autoPan, ohne closeButton, ohne closeOnClick
+            layer.bindPopup(popupHtml, {
+              autoPan: false,
+              closeButton: false,
+              closeOnClick: false
             });
 
-            // Chart zeichnen, wenn das Popup geöffnet wird
+            // Popup auf Hover öffnen
+            layer.on('mouseover', () => layer.openPopup());
+            // Kein Schließen beim Verlassen:
+            // layer.on('mouseout', () => layer.closePopup());
+
+            // Chart beim Öffnen rendern
             layer.on('popupopen', () => {
               const ctx = document.getElementById(canvasId).getContext('2d');
               new Chart(ctx, {
